@@ -1,0 +1,60 @@
+---
+title: "Practical Machine Learning"
+author: "Slyne"
+date: "October 18, 2014"
+output: html_document
+---
+# Background Introduction
+The following process is about how to predict an activity a person does regularly, and the data information is available from the website here : http://groupware.les.inf.puc-rio.br/har 
+
+## Process introduction
+First get the data from the website, then preprocess the data including removing "NA" and delete the irrelevant attributes. Next,seperate the training data into two parts, one for training and the other for testing. Furthermore, train the training data and predict the testing data from original training data. Finally, predict the test data.
+
+
+Get data
+```{r}
+library(randomForest)
+library(caret)
+training_url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+test_url<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(training_url,destfile="pml-training.csv",method="curl")
+download.file(test_url,destfile="pml-testing.csv",method="curl")
+```
+
+Load data
+```{r, echo=FALSE}
+training<-read.csv("pml-training.csv",na.strings=c("","NA","#DIV/0!"))
+test<-read.csv("pml-testing.csv",na.strings=c("","NA","#DIV/0!"))
+```
+Preprocess
+```{r}
+#remove irrelevant data
+training<-training[,-c(1:7)]
+test<-test[,-c(1:7)]
+#remove attributes with 'NA' all values
+na_attr<-colSums(is.na(training))>1
+training<-training[,!na_attr]
+test<-test[,!na_attr]
+```
+Split data
+```{r}
+inTrain<-createDataPartition(y=training$classe,p=0.75,list=FALSE)
+training.train<-training[inTrain,]
+training.test<-training[-inTrain,]
+```
+Train data
+```{r}
+#use random forest to train
+modFit<-train(training.train$classe~.,method="rf",data=training.train[,1:52],tuneGrid=data.frame(mtry=3),trControl=trainControl(method="none"))
+pred<-predict(modFit,training.test[,1:52])
+```
+Show results
+```{r}
+#show result on test data (which is seperated from training data)
+confusionMatrix(training.test$classe,pred)
+
+#show result on real 20 test data
+pred<-predict(modFit,test[1:52])
+pred
+```
+
